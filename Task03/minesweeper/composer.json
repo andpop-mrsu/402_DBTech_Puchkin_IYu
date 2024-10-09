@@ -1,0 +1,29 @@
+{
+    "name": "shindasayonara/minesweeper",
+    "description": "Implementation of the game \"Minesweeper\"",
+    "type": "project",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Shindasayonara\\Minesweeper\\": "src/"
+        },
+        "files": [
+            "src/Controller.php",
+            "src/View.php",
+            "src/Game.php"
+        ]
+    },
+    "bin": [
+        "bin/minesweeper"
+    ],
+    "authors": [
+        {
+            "name": "shindasayonara",
+            "email": "disciplesvanyshu@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "wp-cli/php-cli-tools": "^0.12.0"
+    }
+}
