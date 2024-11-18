@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h2>Minesweeper</h2>
+
+<div>
+    <button id="view-past-games" onclick="loadPastGames()">View Past Games</button>
+    <button id="clear-db" onclick="clearDatabase()">Clear Database</button> <!-- Кнопка для очистки базы -->
+    <ul id="game-list"></ul>
+</div>
+
+<div class="settings">
+    <label for="player-name">Player Name:</label>
+    <input type="text" id="player-name" placeholder="Enter your name" required>
+    <label for="width">Width:</label>
+    <input type="number" id="width" value="10" min="5" max="30">
+    <label for="height">Height:</label>
+    <input type="number" id="height" value="10" min="5" max="30">
+    <label for="mines">Mines:</label>
+    <input type="number" id="mines" value="10" min="1" max="100">
+    <button id="startBtn">New Game</button>
+</div>
+
+<div class="game-container">
+    <div id="game-board"></div>
+    <p id="game-status"></p>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
