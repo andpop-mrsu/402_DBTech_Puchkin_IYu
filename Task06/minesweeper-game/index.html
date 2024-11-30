@@ -11,8 +11,8 @@
 <h2>Minesweeper</h2>
 
 <div>
-    <button id="view-past-games" onclick="loadPastGames()">View Past Games</button>
-    <button id="clear-db" onclick="clearDatabase()">Clear Database</button> <!-- Кнопка для очистки базы -->
+    <button id="view-past-games">View Past Games</button>
+    <button id="clear-db">Clear Database</button>
     <ul id="game-list"></ul>
 </div>
 
@@ -33,6 +33,13 @@
     <p id="game-status"></p>
 </div>
 
-<script src="game.js"></script>
+<div id="replay-container" style="display: none;">
+    <h3>Replay Game</h3>
+    <ul id="replay-list"></ul>
+    <button id="close-replay">Close</button>
+</div>
+
+<script src="https://unpkg.com/idb@7.0.0/build/umd.js"></script>
+<script type="module" src="game.js"></script>
 </body>
 </html>
