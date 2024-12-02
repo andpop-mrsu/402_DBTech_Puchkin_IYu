@@ -1,31 +1,11 @@
+// game.js
+import { saveGame, getAllGames, clearDatabase, getGameById } from './db.js';
+
 document.addEventListener('DOMContentLoaded', function() {
-    let db;
-
-    // Открытие базы данных
-    function openDatabase() {
-        const request = indexedDB.open('minesweeper', 1);
-
-        request.onupgradeneeded = function(event) {
-            const db = event.target.result;
-            const objectStore = db.createObjectStore('games', { keyPath: 'id', autoIncrement: true });
-            objectStore.createIndex('timestamp', 'timestamp', { unique: false });
-        };
-
-        request.onsuccess = function(event) {
-            db = event.target.result;
-        };
-
-        request.onerror = function(event) {
-            console.error('Error opening IndexedDB:', event.target.error);
-        };
-    }
-
-    openDatabase();
-
     let width, height, mines, gameBoard, cells, gameStatus, gameOver = false, playerName;
-    let gameSaved = false; // Флаг для проверки, была ли игра сохранена
+    let gameSaved = false;
+    let moves = [];
 
-    // Привязка кнопки старта игры
     const startBtn = document.getElementById('startBtn');
     startBtn.addEventListener('click', startNewGame);
 
@@ -33,7 +13,12 @@ document.addEventListener('DOMContentLoaded', function() {
     viewPastGamesBtn.addEventListener('click', loadPastGames);
 
     const clearDbBtn = document.getElementById('clear-db');
-    clearDbBtn.addEventListener('click', clearDatabase); // Событие для кнопки очистки базы
+    clearDbBtn.addEventListener('click', clearDatabaseHandler);
+
+    const closeReplayBtn = document.getElementById('close-replay');
+    closeReplayBtn.addEventListener('click', () => {
+        document.getElementById('replay-container').style.display = 'none';
+    });
 
     function startNewGame() {
         playerName = document.getElementById('player-name').value.trim();
@@ -49,7 +34,8 @@ document.addEventListener('DOMContentLoaded', function() {
         gameBoard = document.getElementById('game-board');
         gameStatus = document.getElementById('game-status');
         gameOver = false;
-        gameSaved = false; // Сбрасываем флаг перед началом новой игры
+        gameSaved = false;
+        moves = [];
 
         gameBoard.innerHTML = '';
         gameStatus.textContent = '';
@@ -58,7 +44,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const allCells = width * height;
         const minePositions = generateMines(allCells, mines);
 
-        // Создание игрового поля
         for (let i = 0; i < height; i++) {
             for (let j = 0; j < width; j++) {
                 const cell = document.createElement('div');
@@ -74,7 +59,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Настройки отображения поля
         gameBoard.style.gridTemplateColumns = `repeat(${width}, 40px)`;
         gameBoard.style.gridTemplateRows = `repeat(${height}, 40px)`;
 
@@ -91,14 +75,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleCellClick(cell, minePositions) {
         const index = parseInt(cell.dataset.index);
+        moves.push(index);
 
         if (minePositions.has(index)) {
             cell.classList.add('revealed', 'mine');
             gameOver = true;
             gameStatus.textContent = 'Game Over!';
             if (!gameSaved) {
-                saveGame(false);  // Сохраняем информацию о проигрыше
-                gameSaved = true; // Устанавливаем флаг, чтобы избежать многократного сохранения
+                saveGameData(false);
+                gameSaved = true;
             }
             return;
         }
@@ -119,12 +104,11 @@ document.addEventListener('DOMContentLoaded', function() {
             revealAdjacentCells(index, minePositions);
         }
 
-        // Проверка на победу
         if (checkForWin(minePositions) && !gameSaved) {
             gameStatus.textContent = 'You Win!';
             gameOver = true;
-            saveGame(true);  // Сохраняем информацию о победе
-            gameSaved = true; // Устанавливаем флаг, чтобы избежать многократного сохранения
+            saveGameData(true);
+            gameSaved = true;
         }
     }
 
@@ -167,66 +151,54 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Сохранение игры
-    function saveGame(winStatus) {
+    async function saveGameData(winStatus) {
         const gameData = {
             playerName: playerName,
             size: `${width}x${height}`,
             mines: mines,
             winStatus: winStatus ? 'Won' : 'Lost',
             timestamp: new Date().toISOString(),
+            moves: moves
         };
-
-        const transaction = db.transaction(['games'], 'readwrite');
-        const objectStore = transaction.objectStore('games');
-        const request = objectStore.add(gameData);
-
-        request.onsuccess = function(event) {
-            console.log('Game saved with ID:', event.target.result);
-        };
-
-        request.onerror = function(event) {
-            console.error('Error saving game:', event.target.error);
-        };
+        await saveGame(gameData);
     }
 
-    // Загрузка прошлых игр
-    function loadPastGames() {
-        const transaction = db.transaction(['games'], 'readonly');
-        const objectStore = transaction.objectStore('games');
-        const request = objectStore.getAll();
+    async function loadPastGames() {
+        const games = await getAllGames();
+        const gameList = document.getElementById('game-list');
+        gameList.innerHTML = '';
 
-        request.onsuccess = function(event) {
-            const games = event.target.result;
-            const gameList = document.getElementById('game-list');
-            gameList.innerHTML = '';
+        games.forEach(game => {
+            const listItem = document.createElement('li');
+            const timestamp = new Date(game.timestamp).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
+            listItem.textContent = `Player: ${game.playerName} - Game on ${timestamp} - Size: ${game.size} - Mines: ${game.mines} - Result: ${game.winStatus}`;
 
-            games.forEach(game => {
-                const listItem = document.createElement('li');
-                const timestamp = new Date(game.timestamp).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
-                listItem.textContent = `Player: ${game.playerName} - Game on ${timestamp} - Size: ${game.size} - Mines: ${game.mines} - Result: ${game.winStatus}`;
-                gameList.appendChild(listItem);
-            });
-        };
+            const replayBtn = document.createElement('button');
+            replayBtn.textContent = 'Replay';
+            replayBtn.addEventListener('click', () => replayGame(game.id));
+            listItem.appendChild(replayBtn);
 
-        request.onerror = function(event) {
-            console.error('Error loading games:', event.target.error);
-        };
+            gameList.appendChild(listItem);
+        });
     }
 
-    // Функция для очистки базы данных
-    function clearDatabase() {
-        const request = indexedDB.deleteDatabase('minesweeper');
-        
-        request.onsuccess = function() {
-            console.log('Database cleared');
-            alert('Database cleared!');
-            loadPastGames();  // Обновляем список игр после очистки
-        };
+    async function replayGame(gameId) {
+        const game = await getGameById(gameId);
+        const replayList = document.getElementById('replay-list');
+        replayList.innerHTML = '';
 
-        request.onerror = function(event) {
-            console.error('Error clearing database:', event.target.error);
-            alert('Error clearing database');
-        };
+        game.moves.forEach(move => {
+            const listItem = document.createElement('li');
+            listItem.textContent = `Move: ${move}`;
+            replayList.appendChild(listItem);
+        });
+
+        document.getElementById('replay-container').style.display = 'block';
+    }
+
+    async function clearDatabaseHandler() {
+        await clearDatabase();
+        alert('Database cleared!');
+        loadPastGames();
     }
 });
